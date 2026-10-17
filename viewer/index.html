@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A股日K查看器</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="topbar">
+  <button id="menuBtn" class="menuBtn" aria-label="股票列表" aria-expanded="false">☰</button>
+  <div class="brand"><strong>A股日K</strong><span>2024 至今 · 不复权</span></div>
+  <div class="meta" id="meta">加载中…</div>
+</header>
+<main>
+  <div id="scrim" class="scrim"></div>
+  <aside id="sidebar">
+    <div class="searchWrap">
+      <input id="search" type="search" placeholder="搜索代码或名称，如 600519 / 茅台" autocomplete="off" spellcheck="false" aria-label="搜索股票">
+    </div>
+    <div class="list" id="list" role="listbox" aria-label="股票列表"></div>
+    <div class="listHint" id="listHint"></div>
+  </aside>
+  <section class="panel">
+    <div class="quote">
+      <div class="title"><h1 id="stockName">—</h1><span class="code" id="stockCode"></span></div>
+      <div class="price"><span class="last" id="lastPrice">—</span><span class="delta" id="delta"></span></div>
+      <div class="ranges" role="group" aria-label="时间范围">
+        <button data-n="22">1月</button>
+        <button data-n="66">3月</button>
+        <button data-n="130">6月</button>
+        <button data-n="250">1年</button>
+        <button data-n="0">全部</button>
+      </div>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="chartWrap" id="chartWrap">
+      <canvas id="chart" role="img" aria-label="日K线图"></canvas>
+      <div class="tooltip" id="tooltip" hidden></div>
+    </div>
+  </section>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>
