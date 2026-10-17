@@ -1,14 +1,26 @@
 #!/usr/bin/env node
-// 本地 A 股 K 线查看服务：直接读取 kline.json，前端只通过 HTTP 接口取数据。
+// 本地 A 股 K 线查看服务：直接读取 kline.json（或 kline.json.gz），前端只通过 HTTP 接口取数据。
 // 启动: node server.mjs        (默认 http://localhost:5173)
 // 可选: PORT=5180 或 --port 5180 改端口；KLINE_FILE=path/to/kline.json 指定数据文件
 
 import { createServer } from 'node:http';
-import { readFileSync, openSync, readSync } from 'node:fs';
+import { existsSync, readFileSync, openSync, readSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
+import { basename } from 'node:path';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const DATA_FILE = process.env.KLINE_FILE || `${ROOT}kline.json`;
+const DATA_SOURCE = existsSync(DATA_FILE)
+  ? DATA_FILE
+  : existsSync(`${DATA_FILE}.gz`)
+    ? `${DATA_FILE}.gz`
+    : null;
+if (!DATA_SOURCE) {
+  console.error(`找不到数据文件: ${DATA_FILE} 或 ${DATA_FILE}.gz`);
+  process.exit(1);
+}
+const IS_GZ = DATA_SOURCE.endsWith('.gz');
 const argPortIdx = process.argv.indexOf('--port');
 const ARG_PORT = argPortIdx > 0 ? Number(process.argv[argPortIdx + 1]) : null;
 const PORT = Number(process.env.PORT || ARG_PORT || 5173);
@@ -16,7 +28,8 @@ const PORT = Number(process.env.PORT || ARG_PORT || 5173);
 // ---------- 启动时扫描一遍原文件，只记录每只股票 K 线数组的字节偏移 ----------
 function buildIndex() {
   const t0 = Date.now();
-  const buf = readFileSync(DATA_FILE);
+  const raw = readFileSync(DATA_SOURCE);
+  const buf = IS_GZ ? gunzipSync(raw) : raw;
   const stocks = [];
   const byCode = new Map();
   const byDigits = new Map();
@@ -74,16 +87,19 @@ function buildIndex() {
   );
   const lastDate = m ? m[1] : firstDate;
 
-  console.log(`索引完成: ${stocks.length} 只股票, ${firstDate}~${lastDate}, 用时 ${Date.now() - t0}ms`);
-  return { stocks, byCode, byDigits, firstDate, lastDate };
+  console.log(`索引完成: ${stocks.length} 只股票, ${firstDate}~${lastDate}, 数据源 ${basename(DATA_SOURCE)}, 用时 ${Date.now() - t0}ms`);
+  return { stocks, byCode, byDigits, firstDate, lastDate, buf: IS_GZ ? buf : null };
 }
 
-const { stocks, byCode, byDigits, firstDate, lastDate } = buildIndex();
-const fd = openSync(DATA_FILE, 'r');
+const { stocks, byCode, byDigits, firstDate, lastDate, buf: dataBuf } = buildIndex();
+const fd = dataBuf ? null : openSync(DATA_SOURCE, 'r');
 
 function readK(code) {
   const entry = byCode.get(code) || byDigits.get(code);
   if (!entry) return null;
+  if (dataBuf) {
+    return { code: entry.code, name: entry.name, k: JSON.parse(dataBuf.toString('utf8', entry.start, entry.end)) };
+  }
   const len = entry.end - entry.start;
   const b = Buffer.allocUnsafe(len);
   let off = 0;

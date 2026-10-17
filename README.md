@@ -14,11 +14,12 @@
 ## 目录结构
 
 ```
-server.mjs          Node 后端：索引 kline.json 并提供查询接口
+server.mjs          Node 后端：索引数据文件并提供查询接口
 viewer/
   index.html        页面
   app.js            Canvas 绘图与交互
   style.css          样式
+kline.json.gz       压缩后的行情数据（约 85MB）
 preview.json        数据格式小样本
 .claude/launch.json 启动配置（可选）
 ```
@@ -54,7 +55,7 @@ node server.mjs --port 5180
 
 ## 数据文件
 
-仓库不包含 `kline.json`（约 313MB，超过 GitHub 单文件限制），需要本地自行准备，放在项目根目录。
+仓库包含压缩后的 `kline.json.gz`（约 85MB，原始 JSON 约 313MB）。服务启动时发现没有 `kline.json` 会自动解压 `.gz` 并在内存中索引，无需手动解压；如果根目录同时存在未压缩的 `kline.json`，会优先使用它（启动更快、运行时内存占用更低，gz 模式常驻内存约 400MB）。
 
 数据来源：同花顺金融数据 API 的[全市场数据导出](https://fuyao.aicubes.cn/docs/api-reference/market-dumps/)（`a_share_daily_k_1d_none_10y` 日 K dump，不复权）。转换后的 JSON 结构：
 
